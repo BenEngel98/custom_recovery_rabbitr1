@@ -41,10 +41,10 @@ jobs:
         repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1
         mkdir -p .repo/local_manifests
         cat > .repo/local_manifests/rabbit.xml <<EOF
-<manifest>
-  <project name="BenEngel98/custom_recovery_rabbitr1" path="device/rabbit/r1" remote="github" revision="main" />
-</manifest>
-EOF
+        <manifest>
+          <project name="BenEngel98/custom_recovery_rabbitr1" path="device/rabbit/r1" remote="github" revision="main" />
+        </manifest>
+        EOF
         repo sync -c --no-tags --no-clone-bundle -j$(nproc)
 
     - name: Build recovery image
