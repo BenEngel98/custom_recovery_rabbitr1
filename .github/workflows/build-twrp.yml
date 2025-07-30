@@ -7,62 +7,58 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Still uses 24.04 since it's the default latest
+    runs-on: ubuntu-24.04
 
     env:
       TZ: UTC
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Install base dependencies
+    - name: Install pyenv and Python 2.7
+      run: |
+        curl https://pyenv.run | bash
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init --path)"
+        eval "$(pyenv init -)"
+        eval "$(pyenv virtualenv-init -)"
+        pyenv install 2.7.18
+        pyenv global 2.7.18
+        python --version
+
+    - name: Install AOSP build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          bc bison build-essential curl flex git gnupg gperf libncurses-dev \
-          libssl-dev libxml2-utils lzop pngcrush rsync schedtool squashfs-tools \
-          xsltproc zip zlib1g-dev openjdk-8-jdk
+          bc bison build-essential curl flex g++-multilib gcc-multilib \
+          git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev \
+          lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev \
+          libssl-dev libxml2 libxml2-utils lzop openjdk-8-jdk pngcrush \
+          schedtool squashfs-tools xsltproc zip zlib1g-dev
 
-    - name: Install Python 2.7 via pyenv
+    - name: Set up repo tool
       run: |
-        curl https://pyenv.run | bash
-        echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> $GITHUB_ENV
-        echo 'export PYENV_ROOT="$HOME/.pyenv"' >> $GITHUB_ENV
-        echo 'eval "$(pyenv init --path)"' >> $GITHUB_ENV
-        echo 'eval "$(pyenv init -)"' >> $GITHUB_ENV
-        echo 'eval "$(pyenv virtualenv-init -)"' >> $GITHUB_ENV
-
-    - name: Set up Java + Repo tool
-      run: |
-        sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
         mkdir -p ~/bin
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
         echo "$HOME/bin" >> $GITHUB_PATH
 
-    - name: Install and activate Python 2
+    - name: Initialize repo
       run: |
-        source ~/.bashrc || true
-        pyenv install 2.7.18
-        pyenv global 2.7.18
-        pyenv rehash
-        python --version
-
-    - name: Initialize AOSP repo
-      run: |
-        mkdir aosp
-        cd aosp
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
+        mkdir aosp
+        cd aosp
         repo init -u https://github.com/minativerse/manifest.git -b twrp-12.1 --depth=1
         repo sync -c --no-tags --no-clone-bundle -j$(nproc)
 
-    - name: Copy your device tree
+    - name: Copy device tree
       run: |
         cp -r $GITHUB_WORKSPACE/* aosp/device/rabbit/r1/
 
-    - name: Build recovery image
+    - name: Build TWRP
       run: |
         cd aosp
         source build/envsetup.sh
