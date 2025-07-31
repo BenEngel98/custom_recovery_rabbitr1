@@ -40,12 +40,20 @@ jobs:
         cd ~/aosp
         repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1
         mkdir -p .repo/local_manifests
-        cat > .repo/local_manifests/rabbit.xml <<EOF
+        cat <<EOF > .repo/local_manifests/rabbit.xml
         <manifest>
+          <remote name="github" fetch="https://x-access-token:${{ secrets.GH_PAT }}@github.com" />
           <project name="BenEngel98/custom_recovery_rabbitr1" path="device/rabbit/r1" remote="github" revision="main" />
         </manifest>
         EOF
-        repo sync -c --no-tags --no-clone-bundle -j$(nproc)
+
+    - name: Sync repositories (with retry)
+      run: |
+        cd ~/aosp
+        until repo sync -c --no-tags --no-clone-bundle --force-sync -j4; do
+          echo "Retrying repo sync after failure..."
+          sleep 10
+        done
 
     - name: Build recovery image
       run: |
